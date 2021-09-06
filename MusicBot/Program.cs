@@ -1,12 +1,10 @@
-﻿using System;
+﻿using System.Threading.Tasks;
 
 namespace MusicBot
 {
     class Program
     {
-        static void Main(string[] args)
-        {
-            Console.WriteLine("Hello World!");
-        }
+        public static async Task Main(string[] args)
+       => await StartUp.RunAsync(args);
     }
 }

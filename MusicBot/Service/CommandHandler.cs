@@ -43,8 +43,8 @@ namespace MusicBot.Service
 
         private async Task OnCommandExecute(Optional<CommandInfo> command, ICommandContext context, IResult result)
         {
-            if (command.IsSpecified && !result.IsSuccess)
-                await context.Channel.SendMessageAsync($"Error:{result}");
+           if (command.IsSpecified && !result.IsSuccess)
+                 Console.WriteLine($"Error:{result}");
         }
 
         private async Task OnReadyAsync()

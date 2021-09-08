@@ -28,7 +28,7 @@ namespace MusicBot.Command
 
             var voiceState = Context.User as IVoiceState;
 
-            if (voiceState?.VoiceChannel == null)
+            if (voiceState?.VoiceChannel is null)
             {
                 await ReplyAsync("You must be connected to a voice channel!");
                 return;
@@ -47,7 +47,7 @@ namespace MusicBot.Command
         }
 
         [Command("p")]
-        public async Task PlayAsync([Remainder] string searchQuery)
+        public async Task Play([Remainder] string searchQuery = null)
         {
             if (string.IsNullOrWhiteSpace(searchQuery))
             {
@@ -60,59 +60,23 @@ namespace MusicBot.Command
                 await Join();
             }
 
-            var queries = searchQuery.Split(' ', 1);
-            foreach (var query in queries)
+            var searchResponse = await lavaNode.SearchYouTubeAsync(searchQuery);
+
+            var player = lavaNode.GetPlayer(Context.Guild);
+
+            var track = searchResponse.Tracks.FirstOrDefault();
+
+            if (player.PlayerState == PlayerState.Playing || player.PlayerState == PlayerState.Paused)
             {
-                var searchResponse = await lavaNode.SearchYouTubeAsync(query);
-
-                var player = lavaNode.GetPlayer(Context.Guild);
-
-                if (player.PlayerState == PlayerState.Playing || player.PlayerState == PlayerState.Paused)
-                {
-                    if (!string.IsNullOrWhiteSpace(searchResponse.Playlist.Name))
-                    {
-                        foreach (var track in searchResponse.Tracks)
-                        {
-                            player.Queue.Enqueue(track);
-                        }
-
-                        await ReplyAsync($"Enqueued {searchResponse.Tracks.Count} tracks.");
-                    }
-                    else
-                    {
-                        var track = searchResponse.Tracks.ElementAt(0);
-                        player.Queue.Enqueue(track);
-                        await ReplyAsync($"Enqueued: {track.Title}");
-                    }
-                }
-                else
-                {
-                    var track = searchResponse.Tracks.ElementAt(0);
-
-                    if (!string.IsNullOrWhiteSpace(searchResponse.Playlist.Name))
-                    {
-                        for (var i = 0; i < searchResponse.Tracks.Count; i++)
-                        {
-                            if (i == 0)
-                            {
-                                await player.PlayAsync(track);
-                                await ReplyAsync($"Now Playing: {track.Title}");
-                            }
-                            else
-                            {
-                                player.Queue.Enqueue(searchResponse.Tracks.ElementAt(i));
-                            }
-                        }
-
-                        await ReplyAsync($"Enqueued {searchResponse.Tracks.Count} tracks.");
-                    }
-                    else
-                    {
-                        await player.PlayAsync(track);
-                        await ReplyAsync($"Now Playing: {track.Title}");
-                    }
-                }
+                player.Queue.Enqueue(track);
+                await ReplyAsync($"Enqueued: {track.Title}");
             }
+            else
+            {
+                await player.PlayAsync(track);
+                await ReplyAsync($"Now Playing: {track.Title}");
+            }
+
         }
     }
 }

@@ -9,6 +9,7 @@ using Microsoft.Extensions.Hosting;
 using System.IO;
 using System.Threading.Tasks;
 using MusicBot.Service;
+using Victoria;
 
 namespace MusicBot
 {
@@ -53,7 +54,11 @@ namespace MusicBot
                 .ConfigureServices((context, services) =>
                 {
                     services
-                    .AddHostedService<CommandHandler>();
+                    .AddHostedService<CommandHandler>()
+                    .AddLavaNode(x=> 
+                    {
+                        x.SelfDeaf = true;
+                    });
                 })
                 .UseConsoleLifetime();
     }

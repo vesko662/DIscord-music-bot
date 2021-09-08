@@ -7,38 +7,52 @@ using System;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Victoria;
 
 namespace MusicBot.Service
 {
     public class CommandHandler: InitializedService
     {
-        public static IServiceProvider _provider;
-        public static DiscordSocketClient _client;
-        public static CommandService _command;
-        public static IConfiguration _config;
+        public readonly IServiceProvider provider;
+        public readonly DiscordSocketClient client;
+        public readonly CommandService command;
+        public readonly IConfiguration config;
+        private readonly LavaNode lavaNode;
 
         public CommandHandler(IServiceProvider provider,
-            DiscordSocketClient client,
-            CommandService command,
-            IConfiguration config)
+            DiscordSocketClient client, 
+            CommandService command, 
+            IConfiguration config,
+            LavaNode lavaNode)
         {
-            _provider = provider;
-            _client = client;
-            _command = command;
-            _config = config;
+            this.provider = provider;
+            this.client = client;
+            this.command = command;
+            this.config = config;
+            this.lavaNode = lavaNode;
         }
 
         public override async Task InitializeAsync(CancellationToken cancellationToken)
         {
-            _client.MessageReceived += OnMessageRecieved;
-            _command.CommandExecuted += OnCommandExecute;
-            await _command.AddModulesAsync(Assembly.GetEntryAssembly(), _provider);
+            client.MessageReceived += OnMessageRecieved;
+            command.CommandExecuted += OnCommandExecute;
+            client.Ready += OnReadyAsync;
+
+            await command.AddModulesAsync(Assembly.GetEntryAssembly(), provider);
         }
 
         private async Task OnCommandExecute(Optional<CommandInfo> command, ICommandContext context, IResult result)
         {
             if (command.IsSpecified && !result.IsSuccess)
-                Console.WriteLine($"Error:{result}");
+                await context.Channel.SendMessageAsync($"Error:{result}");
+        }
+
+        private async Task OnReadyAsync()
+        {
+            if (!lavaNode.IsConnected)
+            {
+               await lavaNode.ConnectAsync();
+            }
         }
 
         private async Task OnMessageRecieved(SocketMessage arg)
@@ -48,14 +62,16 @@ namespace MusicBot.Service
 
             if (message.Source != MessageSource.User)
                 return;
-            var prefix = _config["prefix"];
+
+            var prefix = config["prefix"];
             var argPos = 0;
 
-            if (!message.HasStringPrefix(prefix, ref argPos) && !message.HasMentionPrefix(_client.CurrentUser, ref argPos))
+            if (!message.HasStringPrefix(prefix, ref argPos) && !message.HasMentionPrefix(client.CurrentUser, ref argPos))
                 return;
 
-            var context = new SocketCommandContext(_client, message);
-            await _command.ExecuteAsync(context, argPos, _provider);
+            var context = new SocketCommandContext(client, message);
+
+            await command.ExecuteAsync(context, argPos, provider);
         }
     }
 }
